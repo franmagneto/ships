@@ -49,14 +49,6 @@ impl Renderable for Ship<'_> {
         &self.graphics
     }
 
-    fn position(&self) -> Vector2<f64> {
-        self.position
-    }
-
-    fn velocity(&self) -> Vector2<f64> {
-        self.velocity
-    }
-
     fn rect(&self) -> Rect {
         self.rect
     }
