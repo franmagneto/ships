@@ -1,9 +1,11 @@
 use crate::utils::CenterOnVector;
 use nalgebra::Vector2;
 use sdl2::{
+    keyboard::Keycode,
     rect::Rect,
     render::{Texture, WindowCanvas},
 };
+use std::collections::HashSet;
 
 pub(crate) trait Entity {
     fn update(&mut self);
@@ -22,4 +24,8 @@ pub(crate) trait Renderable {
             .copy_ex(self.graphics(), None, render_rect, 0.0, None, false, false)
             .unwrap();
     }
+}
+
+pub(crate) trait Controllable {
+    fn handle_input(&mut self, keys: HashSet<Keycode>);
 }

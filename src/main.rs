@@ -4,11 +4,12 @@ mod utils;
 
 use entities::{
     asteroid::Asteroid,
-    base_entity::{Entity, Renderable},
+    base_entity::{Entity, Renderable, Controllable},
     ship::Ship,
 };
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color};
 use std::{
+    collections::HashSet,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -51,6 +52,14 @@ fn main() {
                 _ => {}
             }
         }
+
+        let keys: HashSet<Keycode> = event_pump
+            .keyboard_state()
+            .pressed_scancodes()
+            .filter_map(Keycode::from_scancode)
+            .collect();
+
+        ship.handle_input(keys);
 
         ship.update();
         asteroid.update();
