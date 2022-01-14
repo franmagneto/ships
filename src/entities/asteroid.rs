@@ -11,8 +11,8 @@ use sdl2::{
 pub(crate) struct Asteroid<'a> {
     graphics: Texture<'a>,
     rect: Rect,
-    position: Vector2<f64>,
-    velocity: Vector2<f64>,
+    position: Vector2<i32>,
+    velocity: Vector2<i32>,
 }
 
 impl<'a> Asteroid<'a> {
@@ -20,8 +20,8 @@ impl<'a> Asteroid<'a> {
         Self {
             graphics: tc.load_texture("assets/asteroid.png").unwrap(),
             rect: Rect::new(0, 0, 16, 16),
-            position: vector![256.0, 100.0],
-            velocity: vector![-1.0, 0.0],
+            position: vector![256, 100],
+            velocity: vector![-1, 0],
         }
     }
 }

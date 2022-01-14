@@ -12,8 +12,8 @@ use std::collections::HashSet;
 
 pub(crate) struct Ship<'a> {
     graphics: Texture<'a>,
-    position: Vector2<f64>,
-    velocity: Vector2<f64>,
+    position: Vector2<i32>,
+    velocity: Vector2<i32>,
     rect: Rect,
 }
 
@@ -21,8 +21,8 @@ impl<'a> Ship<'a> {
     pub(crate) fn new(tc: &'a TextureCreator<WindowContext>) -> Self {
         Self {
             graphics: tc.load_texture("assets/ship.png").unwrap(),
-            position: vector![16.0, 112.0],
-            velocity: vector![0.0, 0.0],
+            position: vector![16, 112],
+            velocity: vector![0, 0],
             rect: Rect::new(0, 0, 16, 16),
         }
     }
@@ -31,14 +31,14 @@ impl<'a> Ship<'a> {
 impl Entity for Ship<'_> {
     fn update(&mut self) {
         self.position += self.velocity;
-        if self.position.y <= 8.0 {
-            self.velocity.y = 0.0;
-            self.position.y = 8.0;
-        } else if self.position.y >= 216.0 {
-            self.velocity.y = 0.0;
-            self.position.y = 216.0;
+        if self.position.y <= 8 {
+            self.velocity.y = 0;
+            self.position.y = 8;
+        } else if self.position.y >= 216 {
+            self.velocity.y = 0;
+            self.position.y = 216;
         } else {
-            self.velocity *= 0.5;
+            self.velocity /= 2;
         }
         self.rect.center_on_vector(self.position);
     }
@@ -57,10 +57,10 @@ impl Renderable for Ship<'_> {
 impl Controllable for Ship<'_> {
     fn handle_input(&mut self, keys: HashSet<Keycode>) {
         if keys.contains(&Keycode::Up) {
-            self.velocity += vector![0.0, -1.0];
+            self.velocity += vector![0, -2];
         }
         if keys.contains(&Keycode::Down) {
-            self.velocity += vector![0.0, 1.0];
+            self.velocity += vector![0, 2];
         }
     }
 }
