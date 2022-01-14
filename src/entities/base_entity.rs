@@ -14,7 +14,7 @@ pub(crate) trait Renderable {
     fn rect(&self) -> Rect;
     fn render(&self, canvas: &mut WindowCanvas) {
         canvas
-            .copy_ex(self.graphics(), None, self.rect(), 0.0, None, false, false)
+            .copy(self.graphics(), None, self.rect())
             .unwrap();
     }
 }
