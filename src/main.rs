@@ -3,7 +3,7 @@ mod utils;
 
 use entities::{
     asteroid::Asteroid,
-    base_entity::{Entity, Renderable, Controllable},
+    base_entity::{Controllable, Entity, Renderable},
     ship::Ship,
 };
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color};
@@ -73,6 +73,6 @@ fn main() {
             .unwrap();
         canvas.copy(&render_target, None, None).unwrap();
         canvas.present();
-        sleep(time_step - start.elapsed());
+        sleep(time_step.saturating_sub(start.elapsed()));
     }
 }
