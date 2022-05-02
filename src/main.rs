@@ -1,5 +1,4 @@
 mod entities;
-mod utils;
 
 use entities::{
     asteroid::Asteroid,
