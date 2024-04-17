@@ -1,22 +1,21 @@
-use super::base_entity::{Entity, Renderable};
-use sdl2::{
-    image::LoadTexture,
-    rect::{Point, Rect},
-    render::{Texture, TextureCreator},
-    video::WindowContext,
+use crate::graphics::{
+    geometry::{Point, Rect},
+    sprite::Sprite,
 };
 
-pub(crate) struct Asteroid<'a> {
-    graphics: Texture<'a>,
+use super::base_entity::{Entity, Renderable};
+
+pub(crate) struct Asteroid {
+    sprite: Sprite,
     rect: Rect,
     position: Point,
     velocity: Point,
 }
 
-impl<'a> Asteroid<'a> {
-    pub(crate) fn new(tc: &'a TextureCreator<WindowContext>) -> Self {
+impl Asteroid {
+    pub(crate) fn new() -> Self {
         Self {
-            graphics: tc.load_texture("assets/asteroid.png").unwrap(),
+            sprite: Sprite::new("assets/asteroid.png"),
             rect: Rect::new(0, 0, 16, 16),
             position: Point::new(256, 100),
             velocity: Point::new(-1, 0),
@@ -24,16 +23,16 @@ impl<'a> Asteroid<'a> {
     }
 }
 
-impl Entity for Asteroid<'_> {
+impl Entity for Asteroid {
     fn update(&mut self) {
         self.position += self.velocity;
         self.rect.center_on(self.position);
     }
 }
 
-impl Renderable for Asteroid<'_> {
-    fn graphics(&self) -> &Texture<'_> {
-        &self.graphics
+impl Renderable for Asteroid {
+    fn sprite(&self) -> &Sprite {
+        &self.sprite
     }
 
     fn rect(&self) -> Rect {

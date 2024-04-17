@@ -1,24 +1,13 @@
-use sdl2::{
-    keyboard::Keycode,
-    rect::Rect,
-    render::{Texture, WindowCanvas},
-};
-use std::collections::HashSet;
+use crate::graphics::{canvas::Canvas, geometry::Rect, sprite::Sprite};
 
 pub(crate) trait Entity {
     fn update(&mut self);
 }
 
 pub(crate) trait Renderable {
-    fn graphics(&self) -> &Texture;
+    fn sprite(&self) -> &Sprite;
     fn rect(&self) -> Rect;
-    fn render(&self, canvas: &mut WindowCanvas) {
-        canvas
-            .copy(self.graphics(), None, self.rect())
-            .unwrap();
+    fn render(&self, canvas: &mut Canvas) {
+        canvas.blit(self.sprite(), self.rect().into())
     }
-}
-
-pub(crate) trait Controllable {
-    fn handle_input(&mut self, keys: HashSet<Keycode>);
 }

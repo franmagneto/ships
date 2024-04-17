@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sdl2 = { version = "0.35.2", features = ["image", "mixer"] }
+image = "0.25.1"
+softbuffer = "0.4.1"
+winit = "0.29.15"

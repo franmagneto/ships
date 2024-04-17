@@ -1,32 +1,37 @@
-use super::base_entity::{Controllable, Entity, Renderable};
-use sdl2::{
-    image::LoadTexture,
-    keyboard::Keycode,
-    rect::{Point, Rect},
-    render::{Texture, TextureCreator},
-    video::WindowContext,
+use crate::graphics::{
+    geometry::{Point, Rect},
+    sprite::Sprite,
 };
-use std::collections::HashSet;
 
-pub(crate) struct Ship<'a> {
-    graphics: Texture<'a>,
+use super::base_entity::{Entity, Renderable};
+
+pub(crate) struct Ship {
+    sprite: Sprite,
     position: Point,
     velocity: Point,
     rect: Rect,
 }
 
-impl<'a> Ship<'a> {
-    pub(crate) fn new(tc: &'a TextureCreator<WindowContext>) -> Self {
+impl Ship {
+    pub(crate) fn new() -> Self {
         Self {
-            graphics: tc.load_texture("assets/ship.png").unwrap(),
+            sprite: Sprite::new("assets/ship.png"),
             position: Point::new(16, 112),
             velocity: Point::new(0, 0),
             rect: Rect::new(0, 0, 16, 16),
         }
     }
+
+    pub(crate) fn go_up(&mut self) {
+        self.velocity += Point::new(0, -2);
+    }
+
+    pub(crate) fn go_down(&mut self) {
+        self.velocity += Point::new(0, 2);
+    }
 }
 
-impl Entity for Ship<'_> {
+impl Entity for Ship {
     fn update(&mut self) {
         self.position += self.velocity;
         if self.position.y <= 8 {
@@ -42,23 +47,12 @@ impl Entity for Ship<'_> {
     }
 }
 
-impl Renderable for Ship<'_> {
-    fn graphics(&self) -> &Texture {
-        &self.graphics
+impl Renderable for Ship {
+    fn sprite(&self) -> &Sprite {
+        &self.sprite
     }
 
     fn rect(&self) -> Rect {
         self.rect
-    }
-}
-
-impl Controllable for Ship<'_> {
-    fn handle_input(&mut self, keys: HashSet<Keycode>) {
-        if keys.contains(&Keycode::Up) {
-            self.velocity += Point::new(0, -2);
-        }
-        if keys.contains(&Keycode::Down) {
-            self.velocity += Point::new(0, 2);
-        }
     }
 }

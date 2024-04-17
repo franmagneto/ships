@@ -1,15 +1,19 @@
 mod entities;
+mod graphics;
 
 use entities::{
     asteroid::Asteroid,
-    base_entity::{Controllable, Entity, Renderable},
+    base_entity::{Entity, Renderable},
     ship::Ship,
 };
-use sdl2::{event::Event, keyboard::Keycode, pixels::Color};
-use std::{
-    collections::HashSet,
-    thread::sleep,
-    time::{Duration, Instant},
+use graphics::{canvas::Canvas, color::Color};
+use std::{num::NonZeroU32, rc::Rc, time::Duration};
+use winit::{
+    dpi::LogicalSize,
+    event::{Event, KeyEvent, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    keyboard::{Key, NamedKey},
+    window::WindowBuilder,
 };
 
 const WIDTH: u32 = 1024;
@@ -17,61 +21,77 @@ const HEIGHT: u32 = 768;
 const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
 fn main() {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-    let window = video_subsystem
-        .window("Ships", WIDTH, HEIGHT)
-        .position_centered()
-        .build()
-        .unwrap();
-    let mut canvas = window.into_canvas().build().unwrap();
-    let texture_creator = canvas.texture_creator();
-    let mut render_target = texture_creator
-        .create_texture_target(texture_creator.default_pixel_format(), 256, 224)
-        .unwrap();
-
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    let event_loop = EventLoop::new().unwrap();
+    let window = {
+        let size = LogicalSize::new(WIDTH, HEIGHT);
+        Rc::new(
+            WindowBuilder::new()
+                .with_title("Ships")
+                .with_inner_size(size)
+                .with_min_inner_size(size)
+                .build(&event_loop)
+                .unwrap(),
+        )
+    };
+    let mut canvas = Canvas::new(
+        window.clone(),
+        NonZeroU32::new(256).unwrap(),
+        NonZeroU32::new(224).unwrap(),
+    );
 
     let time_step = Duration::from_nanos(NS_PER_FRAME);
 
-    let mut ship = Ship::new(&texture_creator);
-    let mut asteroid = Asteroid::new(&texture_creator);
+    let mut ship = Ship::new();
+    let mut asteroid = Asteroid::new();
 
-    'running: loop {
-        let start = Instant::now();
+    event_loop.set_control_flow(ControlFlow::wait_duration(time_step));
 
-        for event in event_pump.poll_iter() {
+    event_loop
+        .run(move |event, elwt| {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::KeyboardInput {
+                            event: KeyEvent { logical_key, .. },
+                            ..
+                        },
+                } if window_id == window.id() => match logical_key {
+                    Key::Named(NamedKey::ArrowUp) => {
+                        ship.go_up();
+                    }
+                    Key::Named(NamedKey::ArrowDown) => {
+                        ship.go_down();
+                    }
+                    _ => {}
+                },
+                Event::AboutToWait => {
+                    canvas.set_color(Color::from_rgb(10, 15, 30));
+                    canvas.clear();
+                    ship.render(&mut canvas);
+                    asteroid.render(&mut canvas);
+                    canvas.present();
+                }
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            event:
+                                KeyEvent {
+                                    logical_key: Key::Named(NamedKey::Escape),
+                                    ..
+                                },
+                            ..
+                        },
+                } if window_id == window.id() => {
+                    elwt.exit();
+                }
                 _ => {}
             }
-        }
 
-        let keys: HashSet<Keycode> = event_pump
-            .keyboard_state()
-            .pressed_scancodes()
-            .filter_map(Keycode::from_scancode)
-            .collect();
-
-        ship.handle_input(keys);
-
-        ship.update();
-        asteroid.update();
-
-        canvas
-            .with_texture_canvas(&mut render_target, |canvas| {
-                canvas.set_draw_color(Color::RGB(10, 15, 30));
-                canvas.clear();
-                ship.render(canvas);
-                asteroid.render(canvas);
-            })
-            .unwrap();
-        canvas.copy(&render_target, None, None).unwrap();
-        canvas.present();
-        sleep(time_step.saturating_sub(start.elapsed()));
-    }
+            ship.update();
+            asteroid.update();
+        })
+        .unwrap();
 }
