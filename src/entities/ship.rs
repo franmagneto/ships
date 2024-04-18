@@ -14,11 +14,14 @@ pub(crate) struct Ship {
 
 impl Ship {
     pub(crate) fn new() -> Self {
+        let sprite = Sprite::load_png("assets/ship.png").unwrap();
+        let width = sprite.width();
+        let height = sprite.height();
         Self {
-            sprite: Sprite::new("assets/ship.png"),
+            sprite,
+            rect: Rect::new(0, 0, width, height),
             position: Point::new(16, 112),
             velocity: Point::new(0, 0),
-            rect: Rect::new(0, 0, 16, 16),
         }
     }
 
@@ -34,12 +37,12 @@ impl Ship {
 impl Entity for Ship {
     fn update(&mut self) {
         self.position += self.velocity;
-        if self.position.y <= 8 {
-            self.velocity.y = 0;
-            self.position.y = 8;
-        } else if self.position.y >= 216 {
-            self.velocity.y = 0;
-            self.position.y = 216;
+        if self.position.y() <= 8 {
+            self.velocity.set_y(0);
+            self.position.set_y(8);
+        } else if self.position.y() >= 216 {
+            self.velocity.set_y(0);
+            self.position.set_y(216);
         } else {
             self.velocity /= 2;
         }

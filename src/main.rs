@@ -66,7 +66,7 @@ fn main() {
                     _ => {}
                 },
                 Event::AboutToWait => {
-                    canvas.set_color(Color::from_rgb(10, 15, 30));
+                    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
                     canvas.clear();
                     ship.render(&mut canvas);
                     asteroid.render(&mut canvas);

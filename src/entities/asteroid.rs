@@ -14,9 +14,12 @@ pub(crate) struct Asteroid {
 
 impl Asteroid {
     pub(crate) fn new() -> Self {
+        let sprite = Sprite::load_png("assets/asteroid.png").unwrap();
+        let width = sprite.width();
+        let height = sprite.height();
         Self {
-            sprite: Sprite::new("assets/asteroid.png"),
-            rect: Rect::new(0, 0, 16, 16),
+            sprite,
+            rect: Rect::new(0, 0, width, height),
             position: Point::new(256, 100),
             velocity: Point::new(-1, 0),
         }

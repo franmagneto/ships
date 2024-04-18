@@ -3,15 +3,34 @@ use std::{
     ops::{AddAssign, DivAssign},
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct Point {
-    pub(crate) x: i32,
-    pub(crate) y: i32,
+    x: i32,
+    y: i32,
 }
 
 impl Point {
     pub(crate) fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
+        Self {
+            x: clamp_position(x),
+            y: clamp_position(y),
+        }
+    }
+
+    pub(crate) fn x(&self) -> i32 {
+        self.x
+    }
+
+    pub(crate) fn y(&self) -> i32 {
+        self.y
+    }
+
+    pub(crate) fn set_x(&mut self, x: i32) {
+        self.x = clamp_position(x);
+    }
+
+    pub(crate) fn set_y(&mut self, y: i32) {
+        self.y = clamp_position(y);
     }
 }
 
@@ -35,7 +54,7 @@ impl From<Point> for (i32, i32) {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct Rect {
     x: i32,
     y: i32,
@@ -62,6 +81,15 @@ impl Rect {
         }
     }
 
+    pub(crate) fn from_point(point: Point, width: u32, height: u32) -> Self {
+        Self {
+            x: clamp_position(point.x),
+            y: clamp_position(point.y),
+            w: clamp_size(width) as i32,
+            h: clamp_size(height) as i32,
+        }
+    }
+
     pub(crate) fn center_on<P>(&mut self, point: P)
     where
         P: Into<(i32, i32)>,
@@ -69,6 +97,45 @@ impl Rect {
         let (x, y) = point.into();
         self.x = clamp_position(clamp_position(x) - self.w / 2);
         self.y = clamp_position(clamp_position(y) - self.h / 2);
+    }
+
+    pub(crate) fn intersection(&self, other: Self) -> Option<Self> {
+        let self_end_point = self.end_point();
+        let other_end_point = other.end_point();
+        let w = min(self_end_point.x, other_end_point.x) - max(self.x, other.x);
+        let h = min(self_end_point.y, other_end_point.y) - max(self.y, other.y);
+        if w < 0 || h < 0 {
+            return None;
+        }
+        Some(Self {
+            x: max(self.x, other.x),
+            y: max(self.y, other.y),
+            w,
+            h,
+        })
+    }
+
+    fn end_point(&self) -> Point {
+        Point {
+            x: self.x + self.w,
+            y: self.y + self.h,
+        }
+    }
+
+    pub(crate) fn x(&self) -> i32 {
+        self.x
+    }
+
+    pub(crate) fn y(&self) -> i32 {
+        self.y
+    }
+
+    pub(crate) fn w(&self) -> i32 {
+        self.w
+    }
+
+    pub(crate) fn h(&self) -> i32 {
+        self.h
     }
 }
 

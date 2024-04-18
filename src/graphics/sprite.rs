@@ -1,30 +1,35 @@
-use image::io::Reader as ImageReader;
+use std::{fs::File, io::Read, path::Path, slice::ChunksExact};
 
-use super::color::Color;
+use png_decoder::PngHeader;
 
 pub(crate) struct Sprite {
-    graphics: Vec<u32>,
+    data: Vec<u8>,
     width: u32,
     height: u32,
 }
 
 impl Sprite {
-    pub(crate) fn new(image_path: &str) -> Self {
-        let image = ImageReader::open(image_path).unwrap().decode().unwrap();
-        Self {
-            graphics: image
-                .as_rgba8()
-                .unwrap()
-                .chunks_exact(4)
-                .map(|pixel| *Color::from_rgb(pixel[0], pixel[1], pixel[2]))
-                .collect(),
-            width: image.width(),
-            height: image.height(),
+    pub(crate) fn load_png<P>(path: P) -> Result<Self, String>
+    where
+        P: AsRef<Path>,
+    {
+        let mut png_data = vec![];
+        match File::open(path) {
+            Ok(mut png_file) => {
+                if let Err(err) = png_file.read_to_end(&mut png_data) {
+                    return Err(err.to_string());
+                }
+            }
+            Err(err) => return Err(err.to_string()),
         }
-    }
-
-    pub(crate) fn graphics(&self) -> &[u32] {
-        &self.graphics
+        match png_decoder::decode(&png_data) {
+            Ok((PngHeader { width, height, .. }, data)) => Ok(Self {
+                data,
+                width,
+                height,
+            }),
+            Err(err) => Err(format!("{:?}", err)),
+        }
     }
 
     pub(crate) fn width(&self) -> u32 {
@@ -33,5 +38,9 @@ impl Sprite {
 
     pub(crate) fn height(&self) -> u32 {
         self.height
+    }
+
+    pub(crate) fn as_lines(&self) -> ChunksExact<'_, u8> {
+        self.data.chunks_exact(4 * self.width as usize)
     }
 }
