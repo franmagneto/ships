@@ -1,4 +1,7 @@
-use std::ops::{AddAssign, DivAssign};
+use std::{
+    cmp::{max, min},
+    ops::{AddAssign, DivAssign},
+};
 
 #[derive(Clone, Copy)]
 pub(crate) struct Point {
@@ -78,21 +81,9 @@ fn min_int_value() -> i32 {
 }
 
 fn clamp_size(val: u32) -> u32 {
-    if val == 0 {
-        1
-    } else if val > max_int_value() {
-        max_int_value()
-    } else {
-        val
-    }
+    max(1, min(max_int_value(), val))
 }
 
 fn clamp_position(val: i32) -> i32 {
-    if val > max_int_value() as i32 {
-        max_int_value() as i32
-    } else if val < min_int_value() {
-        min_int_value()
-    } else {
-        val
-    }
+    min(max_int_value() as i32, max(min_int_value(), val))
 }
