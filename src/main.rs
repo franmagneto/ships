@@ -55,6 +55,7 @@ fn main() {
 
     'main: loop {
         let start = Instant::now();
+
         let status = event_loop.pump_events(Some(Duration::ZERO), |event, elwt| match event {
             Event::WindowEvent {
                 window_id,
@@ -69,16 +70,6 @@ fn main() {
                         ..
                     },
             } if window_id == window.id() => elwt.exit(),
-            Event::WindowEvent {
-                window_id,
-                event: WindowEvent::RedrawRequested,
-            } if window_id == window.id() => {
-                canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
-                canvas.clear();
-                ship.render(&mut canvas);
-                asteroid.render(&mut canvas);
-                canvas.present();
-            }
             Event::WindowEvent {
                 window_id,
                 event:
@@ -97,19 +88,23 @@ fn main() {
                     keys.remove(&logical_key);
                 }
             },
-            Event::AboutToWait => {
-                ship.handle_input(&keys);
-
-                ship.update();
-                asteroid.update();
-
-                sleep(time_step.saturating_sub(start.elapsed()));
-                window.request_redraw();
-            }
+            Event::AboutToWait => window.request_redraw(),
             _ => {}
         });
         if let PumpStatus::Exit(_) = status {
             break 'main;
         }
+        ship.handle_input(&keys);
+
+        ship.update();
+        asteroid.update();
+
+        canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
+        canvas.clear();
+        ship.render(&mut canvas);
+        asteroid.render(&mut canvas);
+        canvas.present();
+
+        sleep(time_step.saturating_sub(start.elapsed()));
     }
 }
