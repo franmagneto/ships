@@ -34,7 +34,7 @@ impl Canvas {
     }
 
     pub(crate) fn clear(&mut self) {
-        let color: Vec<u8> = self.color.into();
+        let color = *self.color;
         for pixel in self.screen.chunks_exact_mut(4) {
             pixel.copy_from_slice(&color);
         }
