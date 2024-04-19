@@ -41,9 +41,9 @@ impl From<&[u8]> for Color {
     }
 }
 
-impl From<Color> for [u8; 4] {
+impl From<Color> for Vec<u8> {
     fn from(value: Color) -> Self {
         let Color { r, g, b, a } = value;
-        [r, g, b, a]
+        vec![r, g, b, a]
     }
 }

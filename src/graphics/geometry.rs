@@ -25,7 +25,7 @@ impl Point {
         self.y
     }
 
-    pub(crate) fn set_x(&mut self, x: i32) {
+    pub(crate) fn _set_x(&mut self, x: i32) {
         self.x = clamp_position(x);
     }
 
