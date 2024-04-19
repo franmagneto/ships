@@ -1,9 +1,13 @@
+use std::collections::HashSet;
+
+use winit::keyboard::{Key, NamedKey};
+
 use crate::graphics::{
     geometry::{Point, Rect},
     sprite::Sprite,
 };
 
-use super::base_entity::{Entity, Renderable};
+use super::base_entity::{Controllable, Entity, Renderable};
 
 pub(crate) struct Ship {
     sprite: Sprite,
@@ -23,14 +27,6 @@ impl Ship {
             position: Point::new(16, 112),
             velocity: Point::new(0, 0),
         }
-    }
-
-    pub(crate) fn go_up(&mut self) {
-        self.velocity += Point::new(0, -2);
-    }
-
-    pub(crate) fn go_down(&mut self) {
-        self.velocity += Point::new(0, 2);
     }
 }
 
@@ -57,5 +53,16 @@ impl Renderable for Ship {
 
     fn rect(&self) -> Rect {
         self.rect
+    }
+}
+
+impl Controllable for Ship {
+    fn handle_input(&mut self, keys: &HashSet<Key>) {
+        if keys.contains(&Key::Named(NamedKey::ArrowUp)) {
+            self.velocity += Point::new(0, -2);
+        }
+        if keys.contains(&Key::Named(NamedKey::ArrowDown)) {
+            self.velocity += Point::new(0, 2);
+        }
     }
 }

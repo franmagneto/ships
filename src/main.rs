@@ -3,19 +3,24 @@ mod graphics;
 
 use entities::{
     asteroid::Asteroid,
-    base_entity::{Entity, Renderable},
+    base_entity::{Controllable, Entity, Renderable},
     ship::Ship,
 };
 use graphics::{canvas::Canvas, color::Color};
-use std::{num::NonZeroU32, rc::Rc, time::Duration};
+use std::{
+    collections::HashSet,
+    num::NonZeroU32,
+    rc::Rc,
+    thread::sleep,
+    time::{Duration, Instant},
+};
 use winit::{
     dpi::LogicalSize,
-    event::Event,
-    event_loop::{ControlFlow, EventLoop},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
+    event_loop::EventLoop,
     keyboard::{Key, NamedKey},
     window::WindowBuilder,
 };
-use winit_input_helper::WinitInputHelper;
 
 const WIDTH: u32 = 1024;
 const HEIGHT: u32 = 768;
@@ -23,7 +28,6 @@ const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();
-    let mut input = WinitInputHelper::new();
     let window = {
         let size = LogicalSize::new(WIDTH, HEIGHT);
         Rc::new(
@@ -46,35 +50,63 @@ fn main() {
     let mut ship = Ship::new();
     let mut asteroid = Asteroid::new();
 
-    event_loop.set_control_flow(ControlFlow::wait_duration(time_step));
+    let mut keys: HashSet<Key> = HashSet::new();
 
     event_loop
         .run(move |event, elwt| {
-            if let Event::AboutToWait = event {
-                canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
-                canvas.clear();
-                ship.render(&mut canvas);
-                asteroid.render(&mut canvas);
-                canvas.present();
-            }
-
-            if input.update(&event) {
-                if input.key_pressed_logical(Key::Named(NamedKey::Escape))
-                    || input.close_requested()
-                {
-                    elwt.exit();
+            let start = Instant::now();
+            match event {
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            event:
+                                KeyEvent {
+                                    logical_key: Key::Named(NamedKey::Escape),
+                                    ..
+                                },
+                            ..
+                        },
+                } if window_id == window.id() => elwt.exit(),
+                Event::WindowEvent {
+                    window_id,
+                    event: WindowEvent::RedrawRequested,
+                } if window_id == window.id() => {
+                    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
+                    canvas.clear();
+                    ship.render(&mut canvas);
+                    asteroid.render(&mut canvas);
+                    canvas.present();
                 }
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::KeyboardInput {
+                            event:
+                                KeyEvent {
+                                    logical_key, state, ..
+                                },
+                            ..
+                        },
+                } if window_id == window.id() => match state {
+                    ElementState::Pressed => {
+                        keys.insert(logical_key);
+                    }
+                    ElementState::Released => {
+                        keys.remove(&logical_key);
+                    }
+                },
+                Event::AboutToWait => {
+                    ship.handle_input(&keys);
 
-                if input.key_held_logical(Key::Named(NamedKey::ArrowUp)) {
-                    ship.go_up();
+                    ship.update();
+                    asteroid.update();
+
+                    sleep(time_step.saturating_sub(start.elapsed()));
+                    window.request_redraw();
                 }
-
-                if input.key_held_logical(Key::Named(NamedKey::ArrowDown)) {
-                    ship.go_down();
-                }
-
-                ship.update();
-                asteroid.update();
+                _ => {}
             }
         })
         .unwrap();
