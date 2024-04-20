@@ -24,26 +24,26 @@ use winit::{
 
 const WIDTH: u32 = 1024;
 const HEIGHT: u32 = 768;
+const LOGICAL_WIDTH: u32 = 256;
+const LOGICAL_HEIGHT: u32 = 224;
 const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();
     let window = {
         let size = LogicalSize::new(WIDTH, HEIGHT);
+        let min_size = LogicalSize::new(LOGICAL_WIDTH, LOGICAL_HEIGHT);
         Rc::new(
             WindowBuilder::new()
                 .with_title("Ships")
                 .with_inner_size(size)
-                .with_min_inner_size(size)
+                .with_min_inner_size(min_size)
                 .build(&event_loop)
                 .unwrap(),
         )
     };
-    let mut canvas = Canvas::new(
-        window.clone(),
-        NonZeroU32::new(256).unwrap(),
-        NonZeroU32::new(224).unwrap(),
-    );
+    let mut canvas = Canvas::new(window.clone(), LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
 
     let time_step = Duration::from_nanos(NS_PER_FRAME);
 
@@ -68,7 +68,12 @@ fn main() {
                     ship.update();
                     asteroid.update();
 
-                    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
+                    let size = window.inner_size();
+                    canvas.resize(
+                        NonZeroU32::new(size.width).unwrap(),
+                        NonZeroU32::new(size.height).unwrap(),
+                    );
+
                     canvas.clear();
                     ship.render(&mut canvas);
                     asteroid.render(&mut canvas);

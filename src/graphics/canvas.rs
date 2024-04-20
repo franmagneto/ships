@@ -1,7 +1,7 @@
 use std::{cell::RefCell, num::NonZeroU32, rc::Rc};
 
 use softbuffer::{Context, Surface};
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, window::Window};
 
 use super::{
     color::Color,
@@ -14,19 +14,44 @@ pub(crate) struct Canvas {
     screen: Vec<u8>,
     rect: Rect,
     color: Color,
+    scale: (f64, f64),
 }
 
 impl Canvas {
-    pub(crate) fn new(window: Rc<Window>, width: NonZeroU32, height: NonZeroU32) -> Self {
+    pub(crate) fn new(window: Rc<Window>, width: u32, height: u32) -> Self {
         let context = Context::new(window.clone()).unwrap();
-        let surface = Rc::new(RefCell::new(Surface::new(&context, window).unwrap()));
-        surface.borrow_mut().resize(width, height).unwrap();
+        let surface = Rc::new(RefCell::new(
+            Surface::new(&context, window.clone()).unwrap(),
+        ));
+        let PhysicalSize {
+            width: window_width,
+            height: window_height,
+        } = window.clone().inner_size();
+        surface
+            .borrow_mut()
+            .resize(
+                NonZeroU32::new(window_width).unwrap(),
+                NonZeroU32::new(window_height).unwrap(),
+            )
+            .unwrap();
         Self {
             surface,
-            screen: vec![0; 4 * width.get() as usize * height.get() as usize],
-            rect: Rect::new(0, 0, width.get(), height.get()),
+            screen: vec![0; 4 * width as usize * height as usize],
+            rect: Rect::new(0, 0, width, height),
             color: Color::from_rgba(0, 0, 0, 0xff),
+            scale: (
+                window_width as f64 / width as f64,
+                window_height as f64 / height as f64,
+            ),
         }
+    }
+
+    pub(crate) fn resize(&mut self, width: NonZeroU32, height: NonZeroU32) {
+        self.surface.borrow_mut().resize(width, height).unwrap();
+        self.scale = (
+            width.get() as f64 / self.rect.w() as f64,
+            height.get() as f64 / self.rect.h() as f64,
+        )
     }
 
     pub(crate) fn set_color(&mut self, color: Color) {
@@ -42,6 +67,7 @@ impl Canvas {
 
     pub(crate) fn present(&self) {
         let mut surface = self.surface.borrow_mut();
+        let window = surface.window().clone();
         let mut buffer = surface.buffer_mut().unwrap();
         let new_buffer: Vec<u32> = self
             .screen
@@ -51,7 +77,13 @@ impl Canvas {
                 Color::from_multiplied(pixel).into()
             })
             .collect();
-        buffer.copy_from_slice(&new_buffer);
+        let PhysicalSize { width, .. } = window.inner_size();
+        for i in 0..buffer.len() {
+            let x = ((i as u32 % width) as f64 / self.scale.0) as usize;
+            let y = ((i as u32 / width) as f64 / self.scale.1) as usize;
+
+            buffer[i] = new_buffer[y * self.rect.w() as usize + x];
+        }
         buffer.present().unwrap();
     }
 
