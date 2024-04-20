@@ -46,7 +46,10 @@ impl Canvas {
         let new_buffer: Vec<u32> = self
             .screen
             .chunks_exact(4)
-            .map(|pixel| Color::from(pixel).into())
+            .map(|pixel| {
+                let pixel: &[u8; 4] = pixel.try_into().unwrap();
+                Color::from_multiplied(pixel).into()
+            })
             .collect();
         buffer.copy_from_slice(&new_buffer);
         buffer.present().unwrap();
@@ -68,7 +71,17 @@ impl Canvas {
 
                 let sprite_start = 4 * start_x as usize;
                 let sprite_end = sprite_start + 4 * dest.w() as usize;
-                screen_slice.copy_from_slice(&line[sprite_start..sprite_end]);
+                let sprite_slice = &line[sprite_start..sprite_end];
+
+                for (screen_pixel, sprite_pixel) in screen_slice
+                    .chunks_exact_mut(4)
+                    .zip(sprite_slice.chunks_exact(4))
+                {
+                    screen_pixel.copy_from_slice(
+                        &*Color::from_multiplied(screen_pixel)
+                            .blend(Color::from_multiplied(sprite_pixel)),
+                    );
+                }
             }
         }
     }
