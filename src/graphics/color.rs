@@ -15,16 +15,16 @@ impl Color {
     }
 
     pub(crate) fn blend(&self, source: Self) -> Self {
-        let [sr, sg, sb, a] = source.0;
-        let [dr, dg, db, _] = self.0;
-        if a == 0xff {
+        let [sr, sg, sb, sa] = source.0;
+        let [dr, dg, db, da] = self.0;
+        if sa == 0xff {
             Self(source.0)
         } else {
             Self([
-                (sr as u32 + (dr as u32 * (255 - a as u32))) as u8,
-                (sg as u32 + (dg as u32 * (255 - a as u32))) as u8,
-                (sb as u32 + (db as u32 * (255 - a as u32))) as u8,
-                0xff,
+                (sr as u32 + (dr as u32 * (255 - sa as u32))) as u8,
+                (sg as u32 + (dg as u32 * (255 - sa as u32))) as u8,
+                (sb as u32 + (db as u32 * (255 - sa as u32))) as u8,
+                (sa as u32 + (da as u32 * (255 - sa as u32))) as u8,
             ])
         }
     }
@@ -87,5 +87,5 @@ fn multiply_channel(c: u8, a: u8) -> u8 {
 }
 
 fn demultiply_channel(c: u8, a: u8) -> u8 {
-    (c as u32 / a as u32 / 255) as u8
+    (c as u32 * 255 / a as u32) as u8
 }
