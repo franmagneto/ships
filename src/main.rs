@@ -17,9 +17,8 @@ use std::{
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyEvent, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
-    platform::pump_events::{EventLoopExtPumpEvents, PumpStatus},
     window::WindowBuilder,
 };
 
@@ -28,7 +27,7 @@ const HEIGHT: u32 = 768;
 const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
 fn main() {
-    let mut event_loop = EventLoop::new().unwrap();
+    let event_loop = EventLoop::new().unwrap();
     let window = {
         let size = LogicalSize::new(WIDTH, HEIGHT);
         Rc::new(
@@ -53,58 +52,64 @@ fn main() {
 
     let mut keys: HashSet<Key> = HashSet::new();
 
-    'main: loop {
-        let start = Instant::now();
+    event_loop.set_control_flow(ControlFlow::Poll);
 
-        let status = event_loop.pump_events(Some(Duration::ZERO), |event, elwt| match event {
-            Event::WindowEvent {
-                window_id,
-                event:
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        event:
-                            KeyEvent {
-                                logical_key: Key::Named(NamedKey::Escape),
-                                ..
-                            },
-                        ..
-                    },
-            } if window_id == window.id() => elwt.exit(),
-            Event::WindowEvent {
-                window_id,
-                event:
-                    WindowEvent::KeyboardInput {
-                        event:
-                            KeyEvent {
-                                logical_key, state, ..
-                            },
-                        ..
-                    },
-            } if window_id == window.id() => match state {
-                ElementState::Pressed => {
-                    keys.insert(logical_key);
+    event_loop
+        .run(move |event, elwt| {
+            let start = Instant::now();
+
+            match event {
+                Event::WindowEvent {
+                    window_id,
+                    event: WindowEvent::RedrawRequested,
+                } if window_id == window.id() => {
+                    ship.handle_input(&keys);
+
+                    ship.update();
+                    asteroid.update();
+
+                    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
+                    canvas.clear();
+                    ship.render(&mut canvas);
+                    asteroid.render(&mut canvas);
+                    canvas.present();
+
+                    sleep(time_step.saturating_sub(start.elapsed()));
                 }
-                ElementState::Released => {
-                    keys.remove(&logical_key);
-                }
-            },
-            Event::AboutToWait => window.request_redraw(),
-            _ => {}
-        });
-        if let PumpStatus::Exit(_) = status {
-            break 'main;
-        }
-        ship.handle_input(&keys);
-
-        ship.update();
-        asteroid.update();
-
-        canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
-        canvas.clear();
-        ship.render(&mut canvas);
-        asteroid.render(&mut canvas);
-        canvas.present();
-
-        sleep(time_step.saturating_sub(start.elapsed()));
-    }
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            event:
+                                KeyEvent {
+                                    logical_key: Key::Named(NamedKey::Escape),
+                                    ..
+                                },
+                            ..
+                        },
+                } if window_id == window.id() => elwt.exit(),
+                Event::WindowEvent {
+                    window_id,
+                    event:
+                        WindowEvent::KeyboardInput {
+                            event:
+                                KeyEvent {
+                                    logical_key, state, ..
+                                },
+                            ..
+                        },
+                } if window_id == window.id() => match state {
+                    ElementState::Pressed => {
+                        keys.insert(logical_key);
+                    }
+                    ElementState::Released => {
+                        keys.remove(&logical_key);
+                    }
+                },
+                Event::AboutToWait => window.request_redraw(),
+                _ => {}
+            }
+        })
+        .unwrap();
 }
