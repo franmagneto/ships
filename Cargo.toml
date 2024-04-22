@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 png-decoder = "0.1.1"
-softbuffer = "0.4.1"
+softbuffer = "0.4.2"
 winit = "0.29.15"
