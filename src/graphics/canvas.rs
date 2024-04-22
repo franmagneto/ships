@@ -12,6 +12,8 @@ use super::{
 pub(crate) struct Canvas {
     surface: Rc<RefCell<Surface<Rc<Window>, Rc<Window>>>>,
     screen: Vec<u8>,
+    scaled_screen_indexes: Vec<usize>,
+    window_size: (u32, u32),
     rect: Rect,
     color: Color,
     scale: (f64, f64),
@@ -24,34 +26,42 @@ impl Canvas {
             Surface::new(&context, window.clone()).unwrap(),
         ));
         let PhysicalSize {
-            width: window_width,
-            height: window_height,
+            width: scaled_width,
+            height: scaled_height,
         } = window.clone().inner_size();
-        surface
-            .borrow_mut()
-            .resize(
-                NonZeroU32::new(window_width).unwrap(),
-                NonZeroU32::new(window_height).unwrap(),
-            )
-            .unwrap();
-        Self {
+        let mut ret = Self {
             surface,
             screen: vec![0; 4 * width as usize * height as usize],
+            scaled_screen_indexes: vec![],
+            window_size: (1, 1),
             rect: Rect::new(0, 0, width, height),
             color: Color::from_rgba(0, 0, 0, 0xff),
-            scale: (
-                window_width as f64 / width as f64,
-                window_height as f64 / height as f64,
-            ),
-        }
+            scale: (1.0, 1.0),
+        };
+        ret.resize(
+            NonZeroU32::new(scaled_width).unwrap(),
+            NonZeroU32::new(scaled_height).unwrap(),
+        );
+
+        ret
     }
 
     pub(crate) fn resize(&mut self, width: NonZeroU32, height: NonZeroU32) {
-        self.surface.borrow_mut().resize(width, height).unwrap();
-        self.scale = (
-            width.get() as f64 / self.rect.w() as f64,
-            height.get() as f64 / self.rect.h() as f64,
-        )
+        if (width.get(), height.get()) != self.window_size {
+            self.surface.borrow_mut().resize(width, height).unwrap();
+            self.scale = (
+                width.get() as f64 / self.rect.w() as f64,
+                height.get() as f64 / self.rect.h() as f64,
+            );
+            self.scaled_screen_indexes = vec![0; width.get() as usize * height.get() as usize];
+            for (i, index) in self.scaled_screen_indexes.iter_mut().enumerate() {
+                let x = ((i as u32 % width) as f64 / self.scale.0) as usize;
+                let y = ((i as u32 / width) as f64 / self.scale.1) as usize;
+
+                *index = y * self.rect.w() as usize + x;
+            }
+            self.window_size = (width.get(), height.get());
+        }
     }
 
     pub(crate) fn set_color(&mut self, color: Color) {
@@ -67,7 +77,6 @@ impl Canvas {
 
     pub(crate) fn present(&self) {
         let mut surface = self.surface.borrow_mut();
-        let window = surface.window().clone();
         let mut buffer = surface.buffer_mut().unwrap();
         let new_buffer: Vec<u32> = self
             .screen
@@ -77,12 +86,8 @@ impl Canvas {
                 Color::from_multiplied(pixel).into()
             })
             .collect();
-        let PhysicalSize { width, .. } = window.inner_size();
-        for i in 0..buffer.len() {
-            let x = ((i as u32 % width) as f64 / self.scale.0) as usize;
-            let y = ((i as u32 / width) as f64 / self.scale.1) as usize;
-
-            buffer[i] = new_buffer[y * self.rect.w() as usize + x];
+        for (i, pixel) in buffer.iter_mut().enumerate() {
+            *pixel = new_buffer[self.scaled_screen_indexes[i]]
         }
         buffer.present().unwrap();
     }
