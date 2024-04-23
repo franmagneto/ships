@@ -3,6 +3,9 @@ name = "ships"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev]
+opt-level = 1
+
 [dependencies]
 png-decoder = "0.1.1"
 softbuffer = "0.4.2"
