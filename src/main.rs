@@ -15,11 +15,12 @@ use std::{
     time::{Duration, Instant},
 };
 use winit::{
+    application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{ElementState, Event, KeyEvent, WindowEvent},
+    event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
-    window::WindowBuilder,
+    window::{Window, WindowAttributes},
 };
 
 const WIDTH: u32 = 1024;
@@ -28,93 +29,120 @@ const LOGICAL_WIDTH: u32 = 256;
 const LOGICAL_HEIGHT: u32 = 224;
 const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
-fn main() {
-    let event_loop = EventLoop::new().unwrap();
-    let window = {
+struct Game {
+    canvas: Canvas,
+    time_step: Duration,
+    ship: Ship,
+    asteroid: Asteroid,
+}
+
+impl Game {
+    fn new(window: Rc<Window>) -> Self {
+        let mut canvas = Canvas::new(window.clone(), LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
+
+        Self {
+            canvas,
+            time_step: Duration::from_nanos(NS_PER_FRAME),
+            ship: Ship::new(),
+            asteroid: Asteroid::new(),
+        }
+    }
+
+    fn update(&mut self, keys: &HashSet<Key>) {
+        self.ship.handle_input(&keys);
+
+        self.ship.update();
+        self.asteroid.update();
+    }
+
+    fn render(&mut self, start: Instant, size: [u32; 2]) {
+        self.canvas.resize(
+            NonZeroU32::new(size[0]).unwrap(),
+            NonZeroU32::new(size[1]).unwrap(),
+        );
+
+        self.canvas.clear();
+        self.ship.render(&mut self.canvas);
+        self.asteroid.render(&mut self.canvas);
+        self.canvas.present();
+
+        sleep(self.time_step.saturating_sub(start.elapsed()));
+    }
+}
+
+#[derive(Default)]
+struct App {
+    window: Option<Rc<Window>>,
+    game: Option<Game>,
+    keys: HashSet<Key>,
+}
+
+impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let size = LogicalSize::new(WIDTH, HEIGHT);
         let min_size = LogicalSize::new(LOGICAL_WIDTH, LOGICAL_HEIGHT);
-        Rc::new(
-            WindowBuilder::new()
-                .with_title("Ships")
-                .with_inner_size(size)
-                .with_min_inner_size(min_size)
-                .build(&event_loop)
-                .unwrap(),
-        )
-    };
-    let mut canvas = Canvas::new(window.clone(), LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
 
-    let time_step = Duration::from_nanos(NS_PER_FRAME);
+        let window_attributes = WindowAttributes::default()
+            .with_title("Ships")
+            .with_inner_size(size)
+            .with_min_inner_size(min_size);
 
-    let mut ship = Ship::new();
-    let mut asteroid = Asteroid::new();
+        self.window = Some(Rc::new(
+            event_loop.create_window(window_attributes).unwrap(),
+        ));
+        self.game = Some(Game::new(self.window.as_ref().unwrap().clone()));
+    }
 
-    let mut keys: HashSet<Key> = HashSet::new();
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        _window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        let start = Instant::now();
+
+        match event {
+            WindowEvent::RedrawRequested => {
+                self.game.as_mut().unwrap().update(&self.keys);
+                self.game
+                    .as_mut()
+                    .unwrap()
+                    .render(start, self.window.as_ref().unwrap().inner_size().into());
+                self.window.as_ref().unwrap().request_redraw();
+            }
+            WindowEvent::CloseRequested
+            | WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        logical_key: Key::Named(NamedKey::Escape),
+                        ..
+                    },
+                ..
+            } => event_loop.exit(),
+            WindowEvent::KeyboardInput {
+                event: KeyEvent {
+                    logical_key, state, ..
+                },
+                ..
+            } => match state {
+                ElementState::Pressed => {
+                    self.keys.insert(logical_key);
+                }
+                ElementState::Released => {
+                    self.keys.remove(&logical_key);
+                }
+            },
+            _ => {}
+        }
+    }
+}
+
+fn main() {
+    let event_loop = EventLoop::new().unwrap();
 
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    event_loop
-        .run(move |event, elwt| {
-            let start = Instant::now();
-
-            match event {
-                Event::WindowEvent {
-                    window_id,
-                    event: WindowEvent::RedrawRequested,
-                } if window_id == window.id() => {
-                    ship.handle_input(&keys);
-
-                    ship.update();
-                    asteroid.update();
-
-                    let size = window.inner_size();
-                    canvas.resize(
-                        NonZeroU32::new(size.width).unwrap(),
-                        NonZeroU32::new(size.height).unwrap(),
-                    );
-
-                    canvas.clear();
-                    ship.render(&mut canvas);
-                    asteroid.render(&mut canvas);
-                    canvas.present();
-
-                    sleep(time_step.saturating_sub(start.elapsed()));
-                }
-                Event::WindowEvent {
-                    window_id,
-                    event:
-                        WindowEvent::CloseRequested
-                        | WindowEvent::KeyboardInput {
-                            event:
-                                KeyEvent {
-                                    logical_key: Key::Named(NamedKey::Escape),
-                                    ..
-                                },
-                            ..
-                        },
-                } if window_id == window.id() => elwt.exit(),
-                Event::WindowEvent {
-                    window_id,
-                    event:
-                        WindowEvent::KeyboardInput {
-                            event:
-                                KeyEvent {
-                                    logical_key, state, ..
-                                },
-                            ..
-                        },
-                } if window_id == window.id() => match state {
-                    ElementState::Pressed => {
-                        keys.insert(logical_key);
-                    }
-                    ElementState::Released => {
-                        keys.remove(&logical_key);
-                    }
-                },
-                Event::AboutToWait => window.request_redraw(),
-                _ => {}
-            }
-        })
-        .unwrap();
+    let mut app = App::default();
+    event_loop.run_app(&mut app).unwrap();
 }
