@@ -7,6 +7,6 @@ edition = "2021"
 opt-level = 1
 
 [dependencies]
+pixels = "0.15.0"
 png-decoder = "0.1.1"
-softbuffer = "0.4.6"
-winit = "0.30.7"
+winit = "0.30.8"

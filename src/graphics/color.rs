@@ -73,15 +73,6 @@ impl From<&[u8; 4]> for Color {
     }
 }
 
-impl From<Color> for u32 {
-    fn from(value: Color) -> u32 {
-        let demultiplied = value.demultiply();
-        ((demultiplied[0] as u32) << 16)
-            | ((demultiplied[1] as u32) << 8)
-            | (demultiplied[2] as u32)
-    }
-}
-
 fn multiply_channel(c: u8, a: u8) -> u8 {
     (c as u32 * a as u32 / 255) as u8
 }

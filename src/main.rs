@@ -9,8 +9,7 @@ use entities::{
 use graphics::{canvas::Canvas, color::Color};
 use std::{
     collections::HashSet,
-    num::NonZeroU32,
-    rc::Rc,
+    sync::Arc,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -29,15 +28,15 @@ const LOGICAL_WIDTH: u32 = 256;
 const LOGICAL_HEIGHT: u32 = 224;
 const NS_PER_FRAME: u64 = 1_001_000_000 / 60;
 
-struct Game {
-    canvas: Canvas,
+struct Game<'a> {
+    canvas: Canvas<'a>,
     time_step: Duration,
     ship: Ship,
     asteroid: Asteroid,
 }
 
-impl Game {
-    fn new(window: Rc<Window>) -> Self {
+impl<'a> Game<'a> {
+    fn new(window: Arc<Window>) -> Self {
         let mut canvas = Canvas::new(window.clone(), LOGICAL_WIDTH, LOGICAL_HEIGHT);
         canvas.set_color(Color::from_rgba(10, 15, 30, 0xff));
 
@@ -56,12 +55,7 @@ impl Game {
         self.asteroid.update();
     }
 
-    fn render(&mut self, start: Instant, size: [u32; 2]) {
-        self.canvas.resize(
-            NonZeroU32::new(size[0]).unwrap(),
-            NonZeroU32::new(size[1]).unwrap(),
-        );
-
+    fn render(&mut self, start: Instant) {
         self.canvas.clear();
         self.ship.render(&mut self.canvas);
         self.asteroid.render(&mut self.canvas);
@@ -72,13 +66,13 @@ impl Game {
 }
 
 #[derive(Default)]
-struct App {
-    window: Option<Rc<Window>>,
-    game: Option<Game>,
+struct App<'a> {
+    window: Option<Arc<Window>>,
+    game: Option<Game<'a>>,
     keys: HashSet<Key>,
 }
 
-impl ApplicationHandler for App {
+impl<'a> ApplicationHandler for App<'a> {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let size = LogicalSize::new(WIDTH, HEIGHT);
         let min_size = LogicalSize::new(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -88,7 +82,7 @@ impl ApplicationHandler for App {
             .with_inner_size(size)
             .with_min_inner_size(min_size);
 
-        self.window = Some(Rc::new(
+        self.window = Some(Arc::new(
             event_loop.create_window(window_attributes).unwrap(),
         ));
         self.game = Some(Game::new(self.window.as_ref().unwrap().clone()));
@@ -104,12 +98,10 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::RedrawRequested => {
-                self.game.as_mut().unwrap().update(&self.keys);
-                self.game
-                    .as_mut()
-                    .unwrap()
-                    .render(start, self.window.as_ref().unwrap().inner_size().into());
                 self.window.as_ref().unwrap().request_redraw();
+
+                self.game.as_mut().unwrap().update(&self.keys);
+                self.game.as_mut().unwrap().render(start);
             }
             WindowEvent::CloseRequested
             | WindowEvent::KeyboardInput {
@@ -120,6 +112,12 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => event_loop.exit(),
+            WindowEvent::Resized(physical_size) => self
+                .game
+                .as_mut()
+                .unwrap()
+                .canvas
+                .resize(physical_size.width, physical_size.height),
             WindowEvent::KeyboardInput {
                 event: KeyEvent {
                     logical_key, state, ..
