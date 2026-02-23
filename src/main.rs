@@ -50,7 +50,7 @@ impl Game {
     }
 
     fn update(&mut self, keys: &HashSet<Key>) {
-        self.ship.handle_input(&keys);
+        self.ship.handle_input(keys);
 
         self.ship.update();
         self.asteroid.update();

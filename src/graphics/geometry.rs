@@ -140,11 +140,11 @@ impl Rect {
 }
 
 fn max_int_value() -> u32 {
-    i32::max_value() as u32 / 2
+    i32::MAX as u32 / 2
 }
 
 fn min_int_value() -> i32 {
-    i32::min_value() / 2
+    i32::MIN / 2
 }
 
 fn clamp_size(val: u32) -> u32 {
