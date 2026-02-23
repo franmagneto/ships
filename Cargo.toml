@@ -8,5 +8,5 @@ opt-level = 1
 
 [dependencies]
 png-decoder = "0.2.0"
-softbuffer = "0.4.6"
-winit = "0.30.7"
+softbuffer = "0.4.8"
+winit = "0.30.12"
