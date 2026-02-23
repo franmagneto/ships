@@ -2,8 +2,6 @@ use std::{fs::File, io::Read, path::Path, slice::ChunksExact};
 
 use png_decoder::PngHeader;
 
-use super::color::Color;
-
 pub(crate) struct Sprite {
     data: Vec<u8>,
     width: u32,
@@ -25,21 +23,11 @@ impl Sprite {
             Err(err) => return Err(err.to_string()),
         }
         match png_decoder::decode(&png_data) {
-            Ok((PngHeader { width, height, .. }, mut data)) => {
-                data = data
-                    .chunks_exact(4)
-                    .map(|pixel| {
-                        let pixel: &[u8; 4] = pixel.try_into().unwrap();
-                        *Color::from(pixel)
-                    })
-                    .flatten()
-                    .collect();
-                Ok(Self {
-                    data,
-                    width,
-                    height,
-                })
-            }
+            Ok((PngHeader { width, height, .. }, data)) => Ok(Self {
+                data: data.into_flattened(),
+                width,
+                height,
+            }),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
